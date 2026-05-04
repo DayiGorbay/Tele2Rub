@@ -34,6 +34,10 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 URL_DIR.mkdir(parents=True, exist_ok=True)
 
+def get_client():
+    c = RubikaClient(name=SESSION)
+    c.start()
+    return c
 
 def safe_filename(name: Optional[str]) -> str:
     name = (name or "file").strip()
@@ -138,7 +142,7 @@ def ensure_session():
     if has_session(SESSION):
         return
 
-    client = RubikaClient(name=SESSION)
+    client = get_client()
 
     try:
         client.start()
@@ -166,7 +170,7 @@ def send_document(file_path: str, caption: str = None):
                         client.disconnect()
                     except:
                         pass
-                    client = RubikaClient(name=SESSION)
+                    client = get_client()
                     client.start()
                 else:
                     raise
@@ -192,7 +196,7 @@ def send_with_timeout(file_path, caption, timeout):
                 client.disconnect()
             except:
                 pass
-            client = RubikaClient(name=SESSION)
+            client = get_client()
             client.start()
         raise RuntimeError("آپلود بیشتر از حد مجاز طول کشید و لغو شد.")
 
@@ -429,17 +433,17 @@ def process_task(task: dict):
 
     finally:
         try:
-            send_path.unlink(missing_ok=True)
-        except Exception:
+            if send_path.exists():
+                os.rename(send_path, str(send_path) + ".locked")
+                send_path = Path(str(send_path) + ".locked")
+        except:
             pass
-
-client = None
 
 def worker_loop():
     ensure_session()
     global client
 
-    client = RubikaClient(name=SESSION)
+    client = get_client()
     client.start()
 
     print("Rubika worker started.")
