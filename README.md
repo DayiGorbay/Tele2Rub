@@ -33,7 +33,7 @@
 ## 🔔🛠️ آپدیت
 
 * بهینه‌سازی مدیریت نشست (Session Management):
--  ` تغییر از حالت “یک کلاینت به ازای هر آپلود” به Persistent Client. حالا کلاینت روبیکا یک‌بار باز می‌شه و باز می‌مونه که سرعت رو به شدت بالا می‌بره.`
+-  ` تغییر از حالت “یک کلاینت به ازای هر آپلود” به Persistent Client. حالا کلاینت روبیکا یک‌ بار باز می‌شه و باز می‌مونه که سرعت رو به شدت بالا می‌بره.`
 * حل باگ Caption:
 -  ` رفع خطای ERROR_GENERIC یا INVALID_INPUT که به دلیل ارسال کپشن‌های خالی به API روبیکا رخ می‌داد.`
 * سیستم مدیریت Timeout هوشمند:
@@ -71,7 +71,7 @@
 ابتدا پروژه را دریافت کنید:
 
 ```bash
-git clone https://github.com/caffeinexz/Tele2Rub.git
+git clone https://github.com/DayiGorbay/Tele2Rub.git
 cd Tele2Rub
 ```
 
@@ -103,7 +103,7 @@ sudo apt install python3 python3-venv python3-pip git -y
 ### 2. دریافت پروژه
 
 ```bash
-git clone https://github.com/caffeinexz/Tele2Rub.git
+git clone https://github.com/DayiGorbay/Tele2Rub.git
 cd Tele2Rub
 ```
 
