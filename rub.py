@@ -33,11 +33,14 @@ TARGET = "me"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 URL_DIR.mkdir(parents=True, exist_ok=True)
+client = None
 
 def get_client():
-    c = RubikaClient(name=SESSION)
-    c.start()
-    return c
+    global client
+    if client is None:
+        client = RubikaClient(name=SESSION)
+        client.start()
+    return client
 
 def safe_filename(name: Optional[str]) -> str:
     name = (name or "file").strip()
@@ -433,10 +436,9 @@ def process_task(task: dict):
 
     finally:
         try:
-            if send_path.exists():
-                os.rename(send_path, str(send_path) + ".locked")
-                send_path = Path(str(send_path) + ".locked")
-        except:
+            if send_path and send_path.exists():
+                send_path.unlink()
+        except Exception:
             pass
 
 def worker_loop():
