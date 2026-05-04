@@ -33,14 +33,7 @@ TARGET = "me"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 URL_DIR.mkdir(parents=True, exist_ok=True)
-client = None
 
-def get_client():
-    global client
-    if client is None:
-        client = RubikaClient(name=SESSION)
-        client.start()
-    return client
 
 def safe_filename(name: Optional[str]) -> str:
     name = (name or "file").strip()
@@ -145,7 +138,7 @@ def ensure_session():
     if has_session(SESSION):
         return
 
-    client = get_client()
+    client = RubikaClient(name=SESSION)
 
     try:
         client.start()
@@ -156,30 +149,24 @@ def ensure_session():
         except Exception:
             pass
 
-client_lock = threading.Lock()
-def send_document(file_path: str, caption: str = None):
-    global client
 
-    with client_lock:
-        for attempt in range(2):
-            try:
-                if caption:
-                    return client.send_document(TARGET, file_path, caption=caption)
-                return client.send_document(TARGET, file_path)
-            except Exception:
-                # Reset client once
-                if attempt == 0:
-                    try:
-                        client.disconnect()
-                    except:
-                        pass
-                    client = get_client()
-                    client.start()
-                else:
-                    raise
-            
+def send_document(file_path: str, caption: str = None):
+    client = RubikaClient(name=SESSION)
+
+    try:
+        client.start()
+        return client.send_document(
+            TARGET,
+            file_path,
+            caption=caption or None
+        )
+    finally:
+        try:
+            client.disconnect()
+        except Exception:
+            pass
+
 def send_with_timeout(file_path, caption, timeout):
-    global client
     result = {}
     error = {}
 
@@ -194,13 +181,6 @@ def send_with_timeout(file_path, caption, timeout):
     t.join(timeout)
 
     if t.is_alive():
-        with client_lock:
-            try:
-                client.disconnect()
-            except:
-                pass
-            client = get_client()
-            client.start()
         raise RuntimeError("آپلود بیشتر از حد مجاز طول کشید و لغو شد.")
 
     if "err" in error:
@@ -341,7 +321,7 @@ def make_zip_with_password(file_path: Path, password: str) -> Path:
     with pyzipper.AESZipFile(
         zip_path,
         "w",
-        compression=pyzipper.ZIP_DEFLATED,
+        compression=pyzipper.ZIP_STORED,
         encryption=pyzipper.WZ_AES,
     ) as zip_file:
         zip_file.setpassword(password.encode("utf-8"))
@@ -443,11 +423,6 @@ def process_task(task: dict):
 
 def worker_loop():
     ensure_session()
-    global client
-
-    client = get_client()
-    client.start()
-
     print("Rubika worker started.")
 
     while True:
