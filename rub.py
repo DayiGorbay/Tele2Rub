@@ -149,24 +149,30 @@ def ensure_session():
         except Exception:
             pass
 
+client_lock = threading.Lock()
+def send_document(file_path: str, caption: str = None):
+    global client
 
-def send_document(file_path: str, caption: str = ""):
-    client = RubikaClient(name=SESSION)
-
-    try:
-        client.start()
-        return client.send_document(
-            TARGET,
-            file_path,
-            caption=caption or ""
-        )
-    finally:
-        try:
-            client.disconnect()
-        except Exception:
-            pass
-
+    with client_lock:
+        for attempt in range(2):
+            try:
+                if caption:
+                    return client.send_document(TARGET, file_path, caption=caption)
+                return client.send_document(TARGET, file_path)
+            except Exception:
+                # Reset client once
+                if attempt == 0:
+                    try:
+                        client.disconnect()
+                    except:
+                        pass
+                    client = RubikaClient(name=SESSION)
+                    client.start()
+                else:
+                    raise
+            
 def send_with_timeout(file_path, caption, timeout):
+    global client
     result = {}
     error = {}
 
@@ -181,6 +187,13 @@ def send_with_timeout(file_path, caption, timeout):
     t.join(timeout)
 
     if t.is_alive():
+        with client_lock:
+            try:
+                client.disconnect()
+            except:
+                pass
+            client = RubikaClient(name=SESSION)
+            client.start()
         raise RuntimeError("آپلود بیشتر از حد مجاز طول کشید و لغو شد.")
 
     if "err" in error:
@@ -284,7 +297,7 @@ def download_url(task: dict) -> Path:
     downloaded, last_update, started = 0, 0, time.time()
 
     with open(target, "wb") as f:
-        for chunk in resp.iter_content(1024 * 1024):
+        for chunk in resp.iter_content(4 * 1024 * 1024):
             if not chunk:
                 continue
             f.write(chunk)
@@ -321,7 +334,7 @@ def make_zip_with_password(file_path: Path, password: str) -> Path:
     with pyzipper.AESZipFile(
         zip_path,
         "w",
-        compression=pyzipper.ZIP_STORED,
+        compression=pyzipper.ZIP_DEFLATED,
         encryption=pyzipper.WZ_AES,
     ) as zip_file:
         zip_file.setpassword(password.encode("utf-8"))
@@ -365,7 +378,9 @@ def append_failed(task: dict, error: str) -> None:
 
 def process_task(task: dict):
     task_type = task.get("type")
-    caption = task.get("caption", "")
+    caption = (task.get("caption") or "").strip()[:512]
+    if not caption:
+        caption = None
     safe_mode = task.get("safe_mode", False)
     zip_password = task.get("zip_password", "")
 
@@ -414,13 +429,19 @@ def process_task(task: dict):
 
     finally:
         try:
-            if send_path and send_path.exists():
-                send_path.unlink()
+            send_path.unlink(missing_ok=True)
         except Exception:
             pass
 
+client = None
+
 def worker_loop():
     ensure_session()
+    global client
+
+    client = RubikaClient(name=SESSION)
+    client.start()
+
     print("Rubika worker started.")
 
     while True:
