@@ -150,7 +150,7 @@ def ensure_session():
             pass
 
 
-def send_document(file_path: str, caption: str = None):
+def send_document(file_path: str, caption: str = ""):
     client = RubikaClient(name=SESSION)
 
     try:
@@ -158,7 +158,7 @@ def send_document(file_path: str, caption: str = None):
         return client.send_document(
             TARGET,
             file_path,
-            caption=caption or None
+            caption=caption
         )
     finally:
         try:
@@ -284,7 +284,7 @@ def download_url(task: dict) -> Path:
     downloaded, last_update, started = 0, 0, time.time()
 
     with open(target, "wb") as f:
-        for chunk in resp.iter_content(4 * 1024 * 1024):
+        for chunk in resp.iter_content(1024 * 1024):
             if not chunk:
                 continue
             f.write(chunk)
